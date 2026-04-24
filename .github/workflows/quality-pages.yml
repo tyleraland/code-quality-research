@@ -12,8 +12,9 @@ permissions:
   id-token: write
 
 # Only one deployment at a time; cancel in-flight runs on new push
+# Scoped to main so feature-branch builds don't compete with live deployments
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -64,8 +65,12 @@ jobs:
           # ── JUnit test results ────────────────────────────────────────────
           cp -r build/reports/tests/test/.        site/tests/
 
-          # ── Per-class landscape (self-contained HTML) ─────────────────────
+          # ── Per-class landscape (self-contained HTML + source JSONs) ─────────
           cp build/reports/quality-landscape/index.html site/landscape/index.html
+          if [ -d build/reports/quality-landscape/sources ]; then
+            mkdir -p site/landscape/sources
+            cp -r build/reports/quality-landscape/sources/. site/landscape/sources/
+          fi
 
           # ── Dashboard index ───────────────────────────────────────────────
           sed \
@@ -82,6 +87,7 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

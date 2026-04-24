@@ -64,6 +64,36 @@ tbody td{padding:.35rem .6rem;vertical-align:middle}
 /* tooltip */
 #tooltip{position:fixed;pointer-events:none;background:#1e2330;border:1px solid #3b4261;border-radius:6px;padding:.5rem .7rem;font-size:.75rem;line-height:1.5;max-width:220px;display:none;z-index:100}
 #tooltip .tt-name{font-weight:600;color:#f1f5f9;margin-bottom:.2rem;word-break:break-all}
+/* code browser */
+#code-browser{border-top:1px solid #1e2330;border-bottom:1px solid #1e2330;background:#0d1117}
+#cb-header{display:flex;align-items:center;gap:.8rem;padding:.55rem 1.5rem;background:#161b27;border-bottom:1px solid #1e2330;flex-wrap:wrap}
+#cb-title{font-weight:600;color:#f1f5f9;font-size:.85rem;flex:1;font-family:'Fira Code',ui-monospace,monospace;word-break:break-all}
+.cb-leg{font-size:.68rem;padding:.1rem .4rem;border-radius:3px;flex-shrink:0}
+.cb-leg-c{background:rgba(34,197,94,.15);color:#22c55e}
+.cb-leg-m{background:rgba(239,68,68,.15);color:#ef4444}
+.cb-leg-p{background:rgba(234,179,8,.15);color:#eab308}
+#cb-close{background:none;border:1px solid #2d3448;color:#94a3b8;border-radius:4px;padding:.15rem .55rem;cursor:pointer;font-size:.78rem;flex-shrink:0}
+#cb-close:hover{background:#1e2330;color:#f1f5f9}
+#cb-body{overflow:auto;max-height:520px}
+#cb-loading{color:#64748b;padding:2rem;text-align:center;font-size:.8rem}
+#cb-table{width:100%;border-collapse:collapse;font-family:'Fira Code','Cascadia Code',ui-monospace,monospace;font-size:12px;line-height:1.7}
+#cb-table td{padding:0;vertical-align:top}
+.cb-ln{width:52px;min-width:52px;text-align:right;padding:0 .5rem;color:#334155;user-select:none;border-right:3px solid transparent;font-size:11px;white-space:nowrap}
+.cb-src{padding:0 .8rem 0 .45rem;white-space:pre;color:#e2e8f0}
+.cb-ann{padding:0 .5rem 0 0;white-space:nowrap;vertical-align:middle}
+tr.cov-C .cb-ln{border-right-color:#22c55e;background:rgba(34,197,94,.07)}
+tr.cov-C .cb-src,.cb-ann{background:rgba(34,197,94,.04)}
+tr.cov-M .cb-ln{border-right-color:#ef4444;background:rgba(239,68,68,.07)}
+tr.cov-M .cb-src{background:rgba(239,68,68,.04)}
+tr.cov-M .cb-ann{background:rgba(239,68,68,.04)}
+tr.cov-P .cb-ln{border-right-color:#eab308;background:rgba(234,179,8,.07)}
+tr.cov-P .cb-src{background:rgba(234,179,8,.04)}
+tr.cov-P .cb-ann{background:rgba(234,179,8,.04)}
+.ann-badge{display:inline-block;font-size:.62rem;padding:.05rem .32rem;border-radius:3px;margin:.05rem;cursor:default;white-space:nowrap}
+.ann-pmd{background:rgba(30,64,175,.3);color:#93c5fd;border:1px solid rgba(30,64,175,.5)}
+.ann-cs{background:rgba(22,101,52,.3);color:#86efac;border:1px solid rgba(22,101,52,.5)}
+.ann-sb{background:rgba(153,27,27,.3);color:#fca5a5;border:1px solid rgba(153,27,27,.5)}
+#ann-tip{position:fixed;pointer-events:none;background:#1e2330;border:1px solid #3b4261;border-radius:6px;padding:.45rem .65rem;font-size:.73rem;line-height:1.5;max-width:320px;display:none;z-index:200;color:#e2e8f0;word-break:break-word}
 </style>
 </head>
 <body>
@@ -93,6 +123,20 @@ tbody td{padding:.35rem .6rem;vertical-align:middle}
   </div>
 </div>
 
+<div id="code-browser" style="display:none">
+  <div id="cb-header">
+    <span id="cb-title"></span>
+    <span class="cb-leg cb-leg-c">■ Covered</span>
+    <span class="cb-leg cb-leg-p">■ Partial</span>
+    <span class="cb-leg cb-leg-m">■ Missed</span>
+    <button id="cb-close" title="Close code browser">✕ close</button>
+  </div>
+  <div id="cb-body">
+    <div id="cb-loading" style="display:none">Loading source…</div>
+    <table id="cb-table"></table>
+  </div>
+</div>
+
 <div id="tbl-wrap">
   <h3>All classes — sorted by risk score <span id="tbl-count"></span></h3>
   <table>
@@ -113,6 +157,7 @@ tbody td{padding:.35rem .6rem;vertical-align:middle}
   </table>
 </div>
 
+<div id="ann-tip"></div>
 <div id="tooltip"></div>
 
 <script>
@@ -380,9 +425,119 @@ function selectClass(d) {
   selectedClass = d.className;
   highlightSelected();
   renderDetail(d);
+  openCodeBrowser(d);
   const row = document.querySelector(`#tbl-body tr[data-cls="${CSS.escape(d.className)}"]`);
   if (row) { row.classList.add('selected'); row.scrollIntoView({block:'nearest',behavior:'smooth'}); }
 }
+
+// ── code browser ─────────────────────────────────────────────────────────────
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function outerCls(cn) {
+  return cn.includes('$') ? cn.split('$')[0] : cn;
+}
+
+function annToolName(t) {
+  return t === 'pmd' ? 'PMD' : t === 'cs' ? 'Checkstyle' : 'SpotBugs';
+}
+
+function annCssClass(t) {
+  return t === 'pmd' ? 'ann-pmd' : t === 'cs' ? 'ann-cs' : 'ann-sb';
+}
+
+function annLabel(a) {
+  const prefix = a.t === 'pmd' ? 'PMD' : a.t === 'cs' ? 'CS' : 'SB';
+  return `${prefix}: ${(a.r||'').replace(/([a-z])([A-Z])/g,'$1​$2').slice(0,22)}`;
+}
+
+let cbCurrentOuter = null;
+
+function openCodeBrowser(d) {
+  const cb    = document.getElementById('code-browser');
+  const outer = outerCls(d.className);
+  document.getElementById('cb-title').textContent = outer.replace(/\./g, '/') + '.java';
+
+  if (outer === cbCurrentOuter) {
+    cb.style.display = 'block';
+    return;
+  }
+  cbCurrentOuter = outer;
+
+  const loading = document.getElementById('cb-loading');
+  const table   = document.getElementById('cb-table');
+  table.innerHTML = '';
+  loading.textContent = 'Loading source…';
+  loading.style.display = 'block';
+  cb.style.display = 'block';
+
+  fetch(`./sources/${encodeURIComponent(outer)}.json`)
+    .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+    .then(data => {
+      loading.style.display = 'none';
+      renderCodeTable(data, table);
+    })
+    .catch(err => {
+      loading.textContent = `Source not available (${err.message}) — run qualityLandscape task to generate source JSONs`;
+    });
+}
+
+function renderCodeTable(data, table) {
+  const annTip = document.getElementById('ann-tip');
+  const frag   = document.createDocumentFragment();
+
+  data.src.forEach((line, i) => {
+    const nr   = i + 1;
+    const cov  = data.cov[String(nr)];
+    const anns = data.ann[String(nr)] || [];
+
+    const tr = document.createElement('tr');
+    if (cov) tr.className = `cov-${cov}`;
+
+    // line number
+    const tdLn = document.createElement('td');
+    tdLn.className = 'cb-ln';
+    tdLn.textContent = nr;
+
+    // source text
+    const tdSrc = document.createElement('td');
+    tdSrc.className = 'cb-src';
+    tdSrc.textContent = line;
+
+    // annotation badges
+    const tdAnn = document.createElement('td');
+    tdAnn.className = 'cb-ann';
+    anns.forEach(a => {
+      const b = document.createElement('span');
+      b.className = `ann-badge ${annCssClass(a.t)}`;
+      b.textContent = annLabel(a);
+      b.addEventListener('mousemove', ev => {
+        const sev = a.s !== undefined ? ` · sev ${a.s}` : a.p !== undefined ? ` · pri ${a.p}` : '';
+        annTip.innerHTML =
+          `<b style="color:#f1f5f9">[${annToolName(a.t)}] ${escapeHtml(a.r||'')}</b>` +
+          (sev ? `<br><span style="color:#94a3b8">${escapeHtml(sev)}</span>` : '') +
+          `<br>${escapeHtml(a.m||'')}`;
+        annTip.style.display = 'block';
+        annTip.style.left = (ev.clientX + 14) + 'px';
+        annTip.style.top  = (ev.clientY - 10) + 'px';
+      });
+      b.addEventListener('mouseleave', () => { annTip.style.display = 'none'; });
+      tdAnn.appendChild(b);
+    });
+
+    tr.appendChild(tdLn);
+    tr.appendChild(tdSrc);
+    tr.appendChild(tdAnn);
+    frag.appendChild(tr);
+  });
+
+  table.appendChild(frag);
+}
+
+document.getElementById('cb-close').addEventListener('click', () => {
+  document.getElementById('code-browser').style.display = 'none';
+});
 
 function highlightSelected() {
   d3.selectAll('circle.cls')
