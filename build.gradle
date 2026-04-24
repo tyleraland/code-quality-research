@@ -1,0 +1,164 @@
+// =============================================================================
+// Code Quality Research — Gradle Build
+//
+// Subject application: Apache Commons Lang 3 (vendored in vendor/commons-lang/)
+// Apache License 2.0 — see vendor/commons-lang/LICENSE.txt
+//
+// Goals:
+//   • Build the vendored source so tools have bytecode to analyze
+//   • Run PMD, Checkstyle, JaCoCo, SpotBugs to generate quality signals
+//   • All tools run with ignoreFailures=true — no enforcement yet
+//   • Reports land in build/reports/<tool>/
+// =============================================================================
+
+plugins {
+    id 'java'
+    id 'checkstyle'
+    id 'pmd'
+    id 'jacoco'
+    id 'com.github.spotbugs' version '6.1.7'
+}
+
+group   = 'org.apache.commons'
+version = '3.21.0-SNAPSHOT'
+
+java {
+    // commons-lang targets Java 8 but several test deps (junit-pioneer) require Java 11+
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// ---------------------------------------------------------------------------
+// Source sets — point at vendored source tree
+// ---------------------------------------------------------------------------
+sourceSets {
+    main {
+        java {
+            srcDirs = ['vendor/commons-lang/src/main/java']
+        }
+    }
+    test {
+        java {
+            srcDirs = ['vendor/commons-lang/src/test/java']
+        }
+        resources {
+            srcDirs = ['vendor/commons-lang/src/test/resources']
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Dependencies
+// ---------------------------------------------------------------------------
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params'
+    testImplementation 'org.junit-pioneer:junit-pioneer:2.3.0'
+    testImplementation 'org.easymock:easymock:5.6.0'
+    testImplementation 'org.mockito:mockito-core:5.14.2'
+    testImplementation 'org.apache.commons:commons-text:1.15.0'
+    testImplementation 'org.openjdk.jmh:jmh-core:1.37'
+    testAnnotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.37'
+    testImplementation 'org.ow2.asm:asm:9.7.1'
+}
+
+// ---------------------------------------------------------------------------
+// Test
+// ---------------------------------------------------------------------------
+test {
+    useJUnitPlatform()
+    ignoreFailures = true   // some vendored tests fail; still collect coverage data
+    finalizedBy jacocoTestReport
+}
+
+// ---------------------------------------------------------------------------
+// JaCoCo — coverage report
+// ---------------------------------------------------------------------------
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required  = true
+        html.required = true
+        csv.required  = true
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Checkstyle — style signals
+// Uses commons-lang's own checkstyle config (paths updated for this layout)
+// ---------------------------------------------------------------------------
+checkstyle {
+    toolVersion    = '10.21.4'
+    configFile     = file('config/checkstyle/checkstyle.xml')
+    configDirectory = file('config/checkstyle')   // resolves ${config_loc} references
+    ignoreFailures = true
+    showViolations = false
+}
+
+// ---------------------------------------------------------------------------
+// PMD — static analysis signals (broad ruleset, all categories)
+// ---------------------------------------------------------------------------
+pmd {
+    toolVersion    = '7.10.0'
+    ruleSetFiles   = files('config/pmd/pmd-ruleset.xml')
+    ruleSets       = []   // clear defaults so only our ruleset runs
+    ignoreFailures = true
+    consoleOutput  = false
+}
+
+pmdMain {
+    reports {
+        xml.required  = true
+        html.required = true
+    }
+}
+
+pmdTest {
+    reports {
+        xml.required  = true
+        html.required = true
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SpotBugs — bytecode-level bug signals
+// ---------------------------------------------------------------------------
+spotbugs {
+    toolVersion    = '4.9.3'
+    ignoreFailures = true
+    excludeFilter  = file('config/spotbugs/spotbugs-exclude-filter.xml')
+    effort      = 'max'
+    reportLevel = 'low'
+}
+
+spotbugsMain {
+    reports {
+        xml.required  = true
+        html.required = true
+    }
+}
+
+spotbugsTest {
+    reports {
+        xml.required  = true
+        html.required = true
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Convenience task: run everything and collect all reports
+// ---------------------------------------------------------------------------
+tasks.register('qualityReport') {
+    group       = 'verification'
+    description = 'Compile, test, and run all quality tools — collects signals, does not enforce.'
+    dependsOn 'check', 'jacocoTestReport'
+}
