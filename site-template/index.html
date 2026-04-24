@@ -12,260 +12,285 @@
       background: #0f1117;
       color: #e2e8f0;
       min-height: 100vh;
-      padding: 2rem 1rem;
+      padding: 2rem 1rem 3rem;
     }
 
-    header {
-      max-width: 960px;
-      margin: 0 auto 2.5rem;
-    }
+    .page { max-width: 980px; margin: 0 auto; }
 
-    header h1 {
-      font-size: 1.75rem;
-      font-weight: 700;
-      color: #f8fafc;
+    /* ── header ── */
+    header { margin-bottom: 2rem; }
+    header h1 { font-size: 1.75rem; font-weight: 700; color: #f8fafc; margin-bottom: .35rem; }
+    header p  { color: #94a3b8; font-size: .95rem; }
+    .meta { margin-top: .6rem; font-size: .78rem; color: #64748b; }
+    .meta a { color: #64748b; text-decoration: none; }
+    .meta a:hover { color: #94a3b8; }
+
+    /* ── hero card ── */
+    .hero {
+      background: linear-gradient(135deg, #1a1f2e 0%, #1e2438 60%, #1a2030 100%);
+      border: 1px solid #f59e0b55;
+      border-radius: 14px;
+      padding: 2rem 2.2rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .hero:hover {
+      border-color: #f59e0b99;
+      box-shadow: 0 6px 30px rgba(245,158,11,.12);
+    }
+    .hero-icon {
+      font-size: 3rem;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .hero-body { flex: 1; min-width: 0; }
+    .hero-eyebrow {
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: #f59e0b;
       margin-bottom: .4rem;
     }
-
-    header p {
+    .hero-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #fef3c7;
+      margin-bottom: .5rem;
+    }
+    .hero-desc {
+      font-size: .88rem;
       color: #94a3b8;
-      font-size: .95rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
     }
-
-    header .meta {
-      margin-top: .75rem;
-      font-size: .8rem;
-      color: #64748b;
+    .hero-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
     }
-
-    header .meta a {
-      color: #64748b;
+    .feature-chip {
+      font-size: .72rem;
+      padding: .2rem .65rem;
+      border-radius: 20px;
+      background: rgba(245,158,11,.1);
+      border: 1px solid rgba(245,158,11,.25);
+      color: #fbbf24;
+    }
+    .hero-cta {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .4rem;
+    }
+    .cta-btn {
+      display: inline-block;
+      padding: .6rem 1.4rem;
+      background: #f59e0b;
+      color: #0f1117;
+      font-weight: 700;
+      font-size: .85rem;
+      border-radius: 8px;
       text-decoration: none;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .cta-btn:hover { background: #fbbf24; }
+    .cta-note { font-size: .68rem; color: #475569; }
+
+    /* ── section label ── */
+    .section-label {
+      font-size: .7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: #475569;
+      margin-bottom: .85rem;
+      padding-bottom: .4rem;
+      border-bottom: 1px solid #1e2330;
     }
 
-    header .meta a:hover { color: #94a3b8; }
-
+    /* ── tool card grid ── */
     .grid {
-      max-width: 960px;
-      margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
     }
 
     .card {
       background: #1e2330;
       border: 1px solid #2d3448;
       border-radius: 10px;
-      padding: 1.4rem 1.5rem;
+      padding: 1.2rem 1.3rem;
       display: flex;
       flex-direction: column;
-      gap: .75rem;
+      gap: .6rem;
       transition: border-color .15s, box-shadow .15s;
     }
+    .card:hover { border-color: #4a5568; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
 
-    .card:hover {
-      border-color: #4a5568;
-      box-shadow: 0 4px 20px rgba(0,0,0,.35);
-    }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      gap: .65rem;
-    }
-
+    .card-header { display: flex; align-items: center; gap: .55rem; }
     .badge {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.15rem;
-      flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
     }
+    .badge-pmd        { background: #1a3a5c; }
+    .badge-checkstyle { background: #1a3a2e; }
+    .badge-spotbugs   { background: #3a1a1a; }
+    .badge-jacoco     { background: #2e1a3a; }
+    .badge-tests      { background: #1a2e3a; }
 
-    .badge-pmd       { background: #1a3a5c; }
-    .badge-checkstyle{ background: #1a3a2e; }
-    .badge-spotbugs  { background: #3a1a1a; }
-    .badge-jacoco    { background: #2e1a3a; }
-    .badge-tests     { background: #1a2e3a; }
+    .card-title { font-size: .95rem; font-weight: 600; color: #f1f5f9; }
+    .card-desc  { font-size: .78rem; color: #64748b; line-height: 1.5; flex: 1; }
 
-    .card-title {
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: #f1f5f9;
-    }
-
-    .card-desc {
-      font-size: .82rem;
-      color: #94a3b8;
-      line-height: 1.55;
-      flex: 1;
-    }
-
-    .card-links {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .5rem;
-      margin-top: .25rem;
-    }
-
+    .card-links { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .1rem; }
     .link-btn {
       display: inline-block;
-      padding: .3rem .75rem;
-      border-radius: 6px;
-      font-size: .78rem;
+      padding: .25rem .65rem;
+      border-radius: 5px;
+      font-size: .73rem;
       font-weight: 500;
       text-decoration: none;
       border: 1px solid;
       transition: background .15s;
     }
-
-    .link-btn-pmd {
-      color: #60a5fa;
-      border-color: #1e40af;
-      background: rgba(30,64,175,.15);
-    }
-    .link-btn-pmd:hover { background: rgba(30,64,175,.35); }
-
-    .link-btn-checkstyle {
-      color: #4ade80;
-      border-color: #166534;
-      background: rgba(22,101,52,.15);
-    }
+    .link-btn-pmd        { color: #60a5fa; border-color: #1e40af; background: rgba(30,64,175,.15); }
+    .link-btn-pmd:hover  { background: rgba(30,64,175,.35); }
+    .link-btn-checkstyle       { color: #4ade80; border-color: #166534; background: rgba(22,101,52,.15); }
     .link-btn-checkstyle:hover { background: rgba(22,101,52,.35); }
-
-    .link-btn-spotbugs {
-      color: #f87171;
-      border-color: #991b1b;
-      background: rgba(153,27,27,.15);
-    }
+    .link-btn-spotbugs       { color: #f87171; border-color: #991b1b; background: rgba(153,27,27,.15); }
     .link-btn-spotbugs:hover { background: rgba(153,27,27,.35); }
-
-    .link-btn-jacoco {
-      color: #c084fc;
-      border-color: #6b21a8;
-      background: rgba(107,33,168,.15);
-    }
+    .link-btn-jacoco       { color: #c084fc; border-color: #6b21a8; background: rgba(107,33,168,.15); }
     .link-btn-jacoco:hover { background: rgba(107,33,168,.35); }
-
-    .link-btn-tests {
-      color: #38bdf8;
-      border-color: #0369a1;
-      background: rgba(3,105,161,.15);
-    }
+    .link-btn-tests       { color: #38bdf8; border-color: #0369a1; background: rgba(3,105,161,.15); }
     .link-btn-tests:hover { background: rgba(3,105,161,.35); }
 
-    footer {
-      max-width: 960px;
-      margin: 3rem auto 0;
-      font-size: .78rem;
-      color: #475569;
-      border-top: 1px solid #1e2330;
-      padding-top: 1.25rem;
-    }
+    footer { font-size: .75rem; color: #475569; padding-top: 1.2rem; border-top: 1px solid #1e2330; }
     footer a { color: #475569; }
     footer a:hover { color: #64748b; }
+
+    @media (max-width: 600px) {
+      .hero { flex-direction: column; align-items: flex-start; }
+      .hero-cta { align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
+<div class="page">
 
-<header>
-  <h1>Code Quality Research</h1>
-  <p>Signal reports for <strong>Apache Commons Lang 3</strong> — PMD · Checkstyle · SpotBugs · JaCoCo</p>
-  <p class="meta">
-    Built __BUILD_DATE__ &nbsp;·&nbsp; commit <code>__SHA_SHORT__</code>
-    &nbsp;·&nbsp; <a href="https://github.com/tyleraland/code-quality-research">source</a>
-    &nbsp;·&nbsp; subject: <a href="https://github.com/apache/commons-lang">apache/commons-lang</a> (Apache 2.0)
-  </p>
-</header>
-
-<div class="grid">
-
-  <div class="card">
-    <div class="card-header">
-      <div class="badge badge-pmd">🔍</div>
-      <span class="card-title">PMD</span>
-    </div>
-    <p class="card-desc">
-      Source-code static analysis across seven rule categories: best practices,
-      code style, design, documentation, error-prone patterns, multithreading,
-      performance, and security. 12 000+ findings on commons-lang.
+  <header>
+    <h1>Code Quality Research</h1>
+    <p>Signal reports for <strong>Apache Commons Lang 3</strong> — PMD · Checkstyle · SpotBugs · JaCoCo</p>
+    <p class="meta">
+      Built __BUILD_DATE__ &nbsp;·&nbsp; commit <code>__SHA_SHORT__</code>
+      &nbsp;·&nbsp; <a href="https://github.com/tyleraland/code-quality-research">source</a>
+      &nbsp;·&nbsp; subject: <a href="https://github.com/apache/commons-lang">apache/commons-lang</a> (Apache 2.0)
     </p>
-    <div class="card-links">
-      <a class="link-btn link-btn-pmd" href="pmd/main.html">Main sources</a>
-      <a class="link-btn link-btn-pmd" href="pmd/test.html">Test sources</a>
+  </header>
+
+  <!-- ── hero: landscape ── -->
+  <a class="hero" href="landscape/index.html">
+    <div class="hero-icon">🗺</div>
+    <div class="hero-body">
+      <div class="hero-eyebrow">Featured · Experimental</div>
+      <div class="hero-title">Quality Landscape</div>
+      <div class="hero-desc">
+        Per-class rollup of all four tools in one interactive view.
+        Every class plotted by complexity vs. coverage, sized by total violations,
+        and colored by composite risk score. Click any class for a full signal breakdown.
+      </div>
+      <div class="hero-features">
+        <span class="feature-chip">Risk scatter plot</span>
+        <span class="feature-chip">Complexity × Coverage</span>
+        <span class="feature-chip">Danger Zone quadrants</span>
+        <span class="feature-chip">Per-class detail panel</span>
+        <span class="feature-chip">Sortable table · 486 classes</span>
+      </div>
     </div>
+    <div class="hero-cta">
+      <span class="cta-btn">Open →</span>
+      <span class="cta-note">Self-contained HTML</span>
+    </div>
+  </a>
+
+  <!-- ── tool reports ── -->
+  <div class="section-label">Individual tool reports</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="badge badge-pmd">🔍</div>
+        <span class="card-title">PMD</span>
+      </div>
+      <p class="card-desc">Static analysis across 7 rule categories — best practices, design, error-prone, multithreading, performance, security. 12 000+ findings.</p>
+      <div class="card-links">
+        <a class="link-btn link-btn-pmd" href="pmd/main.html">Main sources</a>
+        <a class="link-btn link-btn-pmd" href="pmd/test.html">Test sources</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="badge badge-checkstyle">📐</div>
+        <span class="card-title">Checkstyle</span>
+      </div>
+      <p class="card-desc">Style enforcement using commons-lang's own config: imports, Javadoc, braces, whitespace, modifier order.</p>
+      <div class="card-links">
+        <a class="link-btn link-btn-checkstyle" href="checkstyle/main.html">Main sources</a>
+        <a class="link-btn link-btn-checkstyle" href="checkstyle/test.html">Test sources</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="badge badge-spotbugs">🐛</div>
+        <span class="card-title">SpotBugs</span>
+      </div>
+      <p class="card-desc">Bytecode analysis for null dereferences, bad equals contracts, resource leaks, thread-safety issues. Max effort, low confidence threshold.</p>
+      <div class="card-links">
+        <a class="link-btn link-btn-spotbugs" href="spotbugs/main.html">Main sources</a>
+        <a class="link-btn link-btn-spotbugs" href="spotbugs/test.html">Test sources</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="badge badge-jacoco">📊</div>
+        <span class="card-title">JaCoCo</span>
+      </div>
+      <p class="card-desc">Instruction, branch, line, method, and class coverage measured by commons-lang's own 275-class test suite.</p>
+      <div class="card-links">
+        <a class="link-btn link-btn-jacoco" href="jacoco/index.html">Coverage report</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="badge badge-tests">✅</div>
+        <span class="card-title">Test Results</span>
+      </div>
+      <p class="card-desc">JUnit 5 execution results. Test failures don't block report generation — full results shown regardless.</p>
+      <div class="card-links">
+        <a class="link-btn link-btn-tests" href="tests/index.html">Test report</a>
+      </div>
+    </div>
+
   </div>
 
-  <div class="card">
-    <div class="card-header">
-      <div class="badge badge-checkstyle">📐</div>
-      <span class="card-title">Checkstyle</span>
-    </div>
-    <p class="card-desc">
-      Coding-style enforcement using commons-lang's own Checkstyle config:
-      imports, Javadoc, braces, whitespace, modifier order, and more.
-    </p>
-    <div class="card-links">
-      <a class="link-btn link-btn-checkstyle" href="checkstyle/main.html">Main sources</a>
-      <a class="link-btn link-btn-checkstyle" href="checkstyle/test.html">Test sources</a>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <div class="badge badge-spotbugs">🐛</div>
-      <span class="card-title">SpotBugs</span>
-    </div>
-    <p class="card-desc">
-      Bytecode analysis for correctness bugs: null dereferences, bad equals
-      contracts, resource leaks, thread-safety issues. Runs at maximum effort
-      with minimum confidence threshold to surface all signals.
-    </p>
-    <div class="card-links">
-      <a class="link-btn link-btn-spotbugs" href="spotbugs/main.html">Main sources</a>
-      <a class="link-btn link-btn-spotbugs" href="spotbugs/test.html">Test sources</a>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <div class="badge badge-jacoco">📊</div>
-      <span class="card-title">JaCoCo</span>
-    </div>
-    <p class="card-desc">
-      Test coverage: instruction, branch, line, method, and class metrics.
-      Coverage is measured by commons-lang's own test suite (275 test classes).
-    </p>
-    <div class="card-links">
-      <a class="link-btn link-btn-jacoco" href="jacoco/index.html">Coverage report</a>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-header">
-      <div class="badge badge-tests">✅</div>
-      <span class="card-title">Test Results</span>
-    </div>
-    <p class="card-desc">
-      JUnit 5 test execution results. Test failures do not block report
-      generation — the full results are shown here regardless.
-    </p>
-    <div class="card-links">
-      <a class="link-btn link-btn-tests" href="tests/index.html">Test report</a>
-    </div>
-  </div>
+  <footer>
+    Subject code: <a href="https://github.com/apache/commons-lang">Apache Commons Lang 3</a>
+    licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.
+    Reports generated by Gradle with PMD, Checkstyle, SpotBugs, and JaCoCo.
+  </footer>
 
 </div>
-
-<footer>
-  Subject code: <a href="https://github.com/apache/commons-lang">Apache Commons Lang 3</a>
-  licensed under the <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.
-  Reports generated by Gradle with PMD, Checkstyle, SpotBugs, and JaCoCo.
-</footer>
-
 </body>
 </html>
