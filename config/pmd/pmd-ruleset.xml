@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!--
+  PMD ruleset for code quality research.
+  Goal: generate broad signals across all categories. No enforcement — ignoreFailures=true.
+  Derived from the Apache Commons Lang project (Apache License 2.0).
+-->
+<ruleset name="code-quality-research"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.net/ruleset_2_0_0.xsd">
+
+  <description>Broad PMD ruleset for signal generation across all standard categories.</description>
+
+  <!-- Best Practices -->
+  <rule ref="category/java/bestpractices.xml"/>
+
+  <!-- Code Style -->
+  <rule ref="category/java/codestyle.xml">
+    <!-- too noisy / subjective for research baseline -->
+    <exclude name="AtLeastOneConstructor"/>
+    <exclude name="OnlyOneReturn"/>
+    <exclude name="CallSuperInConstructor"/>
+    <exclude name="CommentDefaultAccessModifier"/>
+  </rule>
+
+  <!-- Design -->
+  <rule ref="category/java/design.xml">
+    <!-- exclude rules that require numeric thresholds tuning -->
+    <exclude name="LawOfDemeter"/>
+    <exclude name="LoosePackageCoupling"/>
+  </rule>
+
+  <!-- Documentation -->
+  <rule ref="category/java/documentation.xml"/>
+
+  <!-- Error Prone -->
+  <rule ref="category/java/errorprone.xml"/>
+
+  <!-- Multithreading -->
+  <rule ref="category/java/multithreading.xml"/>
+
+  <!-- Performance -->
+  <rule ref="category/java/performance.xml"/>
+
+  <!-- Security -->
+  <rule ref="category/java/security.xml"/>
+
+</ruleset>
