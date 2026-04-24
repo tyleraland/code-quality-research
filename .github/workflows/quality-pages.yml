@@ -1,0 +1,89 @@
+name: Quality Reports → GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Required for pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one deployment at a time; cancel in-flight runs on new push
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  # ─── Build + analyze ───────────────────────────────────────────────────────
+  build:
+    name: Build & run quality tools
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('**/*.gradle', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      - name: Run all quality tools
+        # ignoreFailures=true on all tools and tests, so this always succeeds
+        run: ./gradlew qualityReport
+
+      - name: Assemble site
+        run: |
+          BUILD_DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
+          SHA_SHORT=${GITHUB_SHA::7}
+
+          mkdir -p site/checkstyle site/pmd site/spotbugs site/jacoco site/tests
+
+          # ── per-tool HTML reports ──────────────────────────────────────────
+          cp build/reports/checkstyle/main.html  site/checkstyle/main.html
+          cp build/reports/checkstyle/test.html  site/checkstyle/test.html  2>/dev/null || true
+          cp build/reports/pmd/main.html         site/pmd/main.html
+          cp build/reports/pmd/test.html         site/pmd/test.html         2>/dev/null || true
+          cp build/reports/spotbugs/main.html    site/spotbugs/main.html
+          cp build/reports/spotbugs/test.html    site/spotbugs/test.html    2>/dev/null || true
+
+          # ── JaCoCo is a full multi-file site ──────────────────────────────
+          cp -r build/reports/jacoco/test/html/. site/jacoco/
+
+          # ── JUnit test results ────────────────────────────────────────────
+          cp -r build/reports/tests/test/.        site/tests/
+
+          # ── Dashboard index ───────────────────────────────────────────────
+          sed \
+            -e "s|__BUILD_DATE__|${BUILD_DATE}|g" \
+            -e "s|__SHA_SHORT__|${SHA_SHORT}|g" \
+            site-template/index.html > site/index.html
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+  # ─── Deploy ────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
