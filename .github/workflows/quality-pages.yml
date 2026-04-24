@@ -12,8 +12,9 @@ permissions:
   id-token: write
 
 # Only one deployment at a time; cancel in-flight runs on new push
+# Scoped to main so feature-branch builds don't compete with live deployments
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -86,6 +87,7 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
