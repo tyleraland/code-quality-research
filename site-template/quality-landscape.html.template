@@ -426,8 +426,10 @@ function selectClass(d) {
   highlightSelected();
   renderDetail(d);
   openCodeBrowser(d);
-  const row = document.querySelector(`#tbl-body tr[data-cls="${CSS.escape(d.className)}"]`);
-  if (row) { row.classList.add('selected'); row.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+  // highlight the table row but don't scroll the page away from the code browser
+  document.querySelectorAll('#tbl-body tr').forEach(tr => {
+    tr.classList.toggle('selected', tr.dataset.cls === d.className);
+  });
 }
 
 // ── code browser ─────────────────────────────────────────────────────────────
@@ -471,15 +473,19 @@ function openCodeBrowser(d) {
   loading.textContent = 'Loading source…';
   loading.style.display = 'block';
   cb.style.display = 'block';
+  cb.scrollIntoView({behavior: 'smooth', block: 'start'});
 
   fetch(`./sources/${encodeURIComponent(outer)}.json`)
     .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
     .then(data => {
       loading.style.display = 'none';
       renderCodeTable(data, table);
+      // scroll the first annotated line into view within the code body
+      const firstAnn = document.querySelector('#cb-table tr td.cb-ann:not(:empty)');
+      if (firstAnn) firstAnn.closest('tr').scrollIntoView({block: 'center'});
     })
     .catch(err => {
-      loading.textContent = `Source not available (${err.message}) — run qualityLandscape task to generate source JSONs`;
+      loading.textContent = `Source not available (${err.message})`;
     });
 }
 
