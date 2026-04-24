@@ -2,7 +2,7 @@ name: Quality Reports → GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, claude/java-code-quality-setup-TWXXE]
   workflow_dispatch:
 
 # Required for pages deployment
