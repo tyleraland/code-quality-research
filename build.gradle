@@ -11,6 +11,8 @@
 //   • Reports land in build/reports/<tool>/
 // =============================================================================
 
+import CodeQualityRollupTask
+
 plugins {
     id 'java'
     id 'checkstyle'
@@ -161,4 +163,13 @@ tasks.register('qualityReport') {
     group       = 'verification'
     description = 'Compile, test, and run all quality tools — collects signals, does not enforce.'
     dependsOn 'check', 'jacocoTestReport'
+}
+
+// ---------------------------------------------------------------------------
+// Per-class quality rollup + landscape visualization
+// ---------------------------------------------------------------------------
+tasks.register('qualityLandscape', CodeQualityRollupTask) {
+    group       = 'verification'
+    description = 'Roll up all quality signals to class level and generate the landscape report.'
+    dependsOn 'qualityReport'
 }

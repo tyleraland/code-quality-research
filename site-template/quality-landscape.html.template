@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quality Landscape</title>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f1117;color:#e2e8f0;font-size:13px}
+a{color:inherit;text-decoration:none}
+/* layout */
+#header{padding:1.2rem 1.5rem .8rem;border-bottom:1px solid #1e2330}
+#header h1{font-size:1.3rem;font-weight:700;color:#f8fafc}
+#header p{color:#64748b;font-size:.8rem;margin-top:.2rem}
+#stats-bar{display:flex;gap:1.5rem;margin-top:.7rem;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column}
+.stat-val{font-size:1.1rem;font-weight:600;color:#f1f5f9}
+.stat-lbl{font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em}
+#controls{display:flex;gap:.7rem;align-items:center;padding:.7rem 1.5rem;background:#0f1117;border-bottom:1px solid #1e2330;flex-wrap:wrap}
+#controls select,#controls input[type=text]{background:#1e2330;border:1px solid #2d3448;color:#e2e8f0;padding:.3rem .6rem;border-radius:5px;font-size:.8rem}
+#controls label{display:flex;align-items:center;gap:.35rem;color:#94a3b8;font-size:.8rem;cursor:pointer}
+#main{display:flex;gap:0;border-bottom:1px solid #1e2330}
+#scatter-wrap{flex:1 1 0;min-width:0;padding:1rem 1rem .5rem}
+#scatter-svg{width:100%;display:block}
+#detail{width:280px;flex-shrink:0;border-left:1px solid #1e2330;padding:1rem;overflow-y:auto;max-height:520px}
+#detail-placeholder{color:#475569;font-size:.8rem;margin-top:3rem;text-align:center}
+/* detail panel */
+.d-title{font-size:1rem;font-weight:600;color:#f1f5f9;word-break:break-all}
+.d-pkg{font-size:.72rem;color:#64748b;margin:.2rem 0 .6rem}
+.risk-badge{display:inline-block;padding:.15rem .55rem;border-radius:4px;font-size:.75rem;font-weight:700;color:#0f1117;margin-bottom:.8rem}
+.d-sec{margin-bottom:.9rem}
+.d-sec h4{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:#475569;margin-bottom:.4rem;border-bottom:1px solid #1e2330;padding-bottom:.25rem}
+.mrow{display:flex;justify-content:space-between;align-items:center;padding:.15rem 0;font-size:.78rem}
+.mval{font-weight:600;color:#f1f5f9}
+.mval.red{color:#ef4444}.mval.orange{color:#fb923c}.mval.yellow{color:#eab308}.mval.green{color:#22c55e}
+.cov-wrap{display:flex;align-items:center;gap:.4rem}
+.cov-bar{width:55px;height:6px;background:#1e2330;border-radius:3px;overflow:hidden;flex-shrink:0}
+.cov-fill{height:100%;border-radius:3px}
+.mini-bar-row{display:flex;align-items:center;gap:.3rem;padding:.1rem 0;font-size:.72rem}
+.mini-bar-row span:first-child{width:90px;flex-shrink:0;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mini-bar{flex:1;height:5px;background:#1e2330;border-radius:2px;overflow:hidden}
+.mini-bar div{height:100%;background:#3b82f6;border-radius:2px}
+.mini-bar-row span:last-child{width:24px;text-align:right;color:#94a3b8}
+.sb-hi{color:#ef4444;font-weight:600}
+/* table */
+#tbl-wrap{padding:.8rem 1.5rem 2rem;overflow-x:auto}
+#tbl-wrap h3{font-size:.8rem;color:#475569;text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem}
+table{width:100%;border-collapse:collapse;font-size:.78rem}
+thead th{background:#0f1117;color:#64748b;font-weight:500;text-transform:uppercase;letter-spacing:.05em;font-size:.68rem;padding:.45rem .6rem;border-bottom:1px solid #1e2330;white-space:nowrap;cursor:pointer;user-select:none;position:sticky;top:0}
+thead th:hover{color:#94a3b8}
+thead th.sorted{color:#60a5fa}
+tbody tr{border-bottom:1px solid #161b27;cursor:pointer;transition:background .1s}
+tbody tr:hover{background:#161b27}
+tbody tr.selected{background:#1a2540}
+tbody td{padding:.35rem .6rem;vertical-align:middle}
+.cls-name{font-weight:500;color:#f1f5f9;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pkg-name{color:#475569;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl-cov{display:flex;align-items:center;gap:.35rem}
+.tbl-bar{width:40px;height:5px;background:#1e2330;border-radius:2px;overflow:hidden;flex-shrink:0}
+.tbl-fill{height:100%;border-radius:2px}
+.sb-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px}
+.risk-num{font-weight:600}
+/* tooltip */
+#tooltip{position:fixed;pointer-events:none;background:#1e2330;border:1px solid #3b4261;border-radius:6px;padding:.5rem .7rem;font-size:.75rem;line-height:1.5;max-width:220px;display:none;z-index:100}
+#tooltip .tt-name{font-weight:600;color:#f1f5f9;margin-bottom:.2rem;word-break:break-all}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Quality Landscape — Apache Commons Lang</h1>
+  <p>Per-class rollup: JaCoCo coverage · PMD violations · Checkstyle · SpotBugs</p>
+  <div id="stats-bar"></div>
+</div>
+
+<div id="controls">
+  <select id="pkg-filter"><option value="">All packages</option></select>
+  <input id="search" type="text" placeholder="Search class…" style="width:160px">
+  <label><input type="checkbox" id="hide-inner"> Hide inner classes</label>
+  <label><input type="checkbox" id="hide-nocov"> Only classes with coverage data</label>
+</div>
+
+<div id="main">
+  <div id="scatter-wrap">
+    <svg id="scatter-svg"></svg>
+  </div>
+  <div id="detail">
+    <div id="detail-placeholder">← hover or click a class<br><br>
+      <span style="font-size:.7rem;color:#334155">Bubble size = total violations<br>Color = risk score<br>Red ring = SpotBugs bugs<br>X = complexity · Y = coverage</span>
+    </div>
+    <div id="detail-content" style="display:none"></div>
+  </div>
+</div>
+
+<div id="tbl-wrap">
+  <h3>All classes — sorted by risk score <span id="tbl-count"></span></h3>
+  <table>
+    <thead>
+      <tr>
+        <th data-col="riskScore" class="sorted">#  Risk ▼</th>
+        <th data-col="simpleName">Class</th>
+        <th data-col="packageName">Package</th>
+        <th data-col="linePct">Line Cov</th>
+        <th data-col="branchPct">Branch Cov</th>
+        <th data-col="jacocoComplexity">Complexity</th>
+        <th data-col="pmdTotal">PMD</th>
+        <th data-col="csTotal">CS</th>
+        <th data-col="sbTotal">SpotBugs</th>
+      </tr>
+    </thead>
+    <tbody id="tbl-body"></tbody>
+  </table>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+const ALL_DATA = __DATA_JSON__;
+
+// ── colour helpers ───────────────────────────────────────────────────────────
+function riskColor(score, max) {
+  const t = Math.min(score / (max * 0.7), 1);
+  return d3.interpolateRdYlGn(1 - t);
+}
+function covColor(pct) {
+  return pct >= 80 ? '#22c55e' : pct >= 60 ? '#eab308' : pct >= 40 ? '#fb923c' : '#ef4444';
+}
+function covClass(pct) {
+  return pct >= 80 ? 'green' : pct >= 60 ? 'yellow' : pct >= 40 ? 'orange' : 'red';
+}
+
+// ── filters & state ──────────────────────────────────────────────────────────
+let sortCol = 'riskScore', sortAsc = false;
+let selectedClass = null;
+
+function activeData() {
+  const pkg       = document.getElementById('pkg-filter').value;
+  const q         = document.getElementById('search').value.toLowerCase();
+  const hideInner = document.getElementById('hide-inner').checked;
+  const hideCov   = document.getElementById('hide-nocov').checked;
+  return ALL_DATA.filter(d => {
+    if (hideInner && d.isInner) return false;
+    if (hideCov && d.jacocoComplexity === 0 && d.linePct === 0) return false;
+    if (pkg && d.packageName !== pkg) return false;
+    if (q && !d.className.toLowerCase().includes(q) && !d.simpleName.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => {
+    const av = a[sortCol] ?? 0, bv = b[sortCol] ?? 0;
+    if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
+    return sortAsc ? av - bv : bv - av;
+  });
+}
+
+// ── summary stats bar ────────────────────────────────────────────────────────
+(function buildStats() {
+  const withCov = ALL_DATA.filter(d => d.linesCovered + d.linesMissed > 0);
+  const avgCov  = withCov.length ? d3.mean(withCov, d => d.linePct).toFixed(1) : '—';
+  const sbTotal = d3.sum(ALL_DATA, d => d.sbTotal);
+  const pmdTotal= d3.sum(ALL_DATA, d => d.pmdTotal);
+  const csTotal = d3.sum(ALL_DATA, d => d.csTotal);
+  const stats = [
+    ['Classes', ALL_DATA.length],
+    ['Avg Line Coverage', avgCov + '%'],
+    ['SpotBugs bugs', sbTotal],
+    ['PMD violations', pmdTotal.toLocaleString()],
+    ['Checkstyle', csTotal.toLocaleString()],
+  ];
+  const bar = document.getElementById('stats-bar');
+  stats.forEach(([lbl, val]) => {
+    bar.insertAdjacentHTML('beforeend',
+      `<div class="stat"><span class="stat-val">${val}</span><span class="stat-lbl">${lbl}</span></div>`);
+  });
+})();
+
+// ── package filter options ───────────────────────────────────────────────────
+(function buildPkgFilter() {
+  const pkgs = [...new Set(ALL_DATA.map(d => d.packageName).filter(Boolean))].sort();
+  const sel  = document.getElementById('pkg-filter');
+  pkgs.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p; o.textContent = p.replace('org.apache.commons.lang3', 'o.a.c.lang3');
+    sel.appendChild(o);
+  });
+})();
+
+// ── scatter plot ─────────────────────────────────────────────────────────────
+const margin = {top: 28, right: 16, bottom: 52, left: 58};
+let plotW, plotH, xScale, yScale, riskMax;
+
+function setupScatter() {
+  const svgEl = document.getElementById('scatter-svg');
+  const totalW = svgEl.parentElement.clientWidth - 2;
+  const totalH = 460;
+  svgEl.setAttribute('height', totalH);
+
+  plotW = totalW - margin.left - margin.right;
+  plotH = totalH - margin.top  - margin.bottom;
+
+  const svg = d3.select('#scatter-svg').attr('width', totalW);
+  svg.selectAll('*').remove();
+
+  const data = activeData();
+  if (!data.length) return;
+
+  riskMax = d3.max(data, d => d.riskScore) || 1;
+
+  const xVal = d => Math.max(1, d.jacocoComplexity || d.maxCyclomatic || 1);
+  const yVal = d => d.linePct || 0;
+
+  xScale = d3.scaleLog()
+    .domain([1, Math.max(10, d3.max(data, xVal))])
+    .range([0, plotW]).clamp(true);
+
+  yScale = d3.scaleLinear().domain([0, 100]).range([plotH, 0]);
+
+  const sizeScale = d3.scaleSqrt()
+    .domain([0, Math.max(1, d3.max(data, d => d.pmdTotal + d.csTotal + d.sbTotal))])
+    .range([3, 18]);
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  // quadrant backgrounds
+  const xMedian = xScale(d3.median(data, xVal));
+  const ySplit  = yScale(70);
+  const quads = [
+    {x:0,        y:0,      w:xMedian,       h:ySplit,             fill:'rgba(34,197,94,0.05)',   label:'Simple & Covered',   lx:.5, ly:.5},
+    {x:xMedian,  y:0,      w:plotW-xMedian, h:ySplit,             fill:'rgba(251,191,36,0.05)',  label:'Complex & Covered',  lx:.5, ly:.5},
+    {x:0,        y:ySplit, w:xMedian,       h:plotH-ySplit,       fill:'rgba(148,163,184,0.04)', label:'Simple & Untested',  lx:.5, ly:.5},
+    {x:xMedian,  y:ySplit, w:plotW-xMedian, h:plotH-ySplit,       fill:'rgba(239,68,68,0.07)',   label:'⚠ Danger Zone',     lx:.5, ly:.5},
+  ];
+  quads.forEach(q => {
+    g.append('rect').attr('x',q.x).attr('y',q.y).attr('width',q.w).attr('height',q.h).attr('fill',q.fill);
+    g.append('text').attr('x', q.x + q.w * q.lx).attr('y', q.y + q.h * q.ly)
+      .attr('text-anchor','middle').attr('dominant-baseline','middle')
+      .attr('font-size','9').attr('fill','#334155').attr('pointer-events','none')
+      .text(q.label);
+  });
+  // divider lines
+  g.append('line').attr('x1',xMedian).attr('x2',xMedian).attr('y1',0).attr('y2',plotH)
+    .attr('stroke','#2d3448').attr('stroke-dasharray','3,3');
+  g.append('line').attr('x1',0).attr('x2',plotW).attr('y1',ySplit).attr('y2',ySplit)
+    .attr('stroke','#2d3448').attr('stroke-dasharray','3,3');
+
+  // axes
+  g.append('g').attr('transform',`translate(0,${plotH})`)
+    .call(d3.axisBottom(xScale).ticks(5,'~s').tickSize(-plotH))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('.tick line').attr('stroke','#1e2330'); ax.selectAll('text').attr('fill','#475569').attr('font-size','10'); });
+  g.append('g')
+    .call(d3.axisLeft(yScale).ticks(5).tickSize(-plotW))
+    .call(ax => { ax.select('.domain').remove(); ax.selectAll('.tick line').attr('stroke','#1e2330'); ax.selectAll('text').attr('fill','#475569').attr('font-size','10'); });
+
+  // axis labels
+  g.append('text').attr('x', plotW/2).attr('y', plotH+40).attr('text-anchor','middle')
+    .attr('fill','#475569').attr('font-size','11').text('Cyclomatic complexity (log scale)');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-(plotH/2)).attr('y',-44)
+    .attr('text-anchor','middle').attr('fill','#475569').attr('font-size','11').text('Line coverage %');
+
+  // SpotBugs rings (drawn under bubbles)
+  g.selectAll('circle.sb-ring').data(data.filter(d => d.sbTotal > 0), d => d.className)
+    .join('circle').attr('class','sb-ring')
+    .attr('cx', d => xScale(xVal(d))).attr('cy', d => yScale(yVal(d)))
+    .attr('r', d => sizeScale(d.pmdTotal + d.csTotal + d.sbTotal) + Math.min(d.sbTotal, 4))
+    .attr('fill','none').attr('stroke','#ef4444')
+    .attr('stroke-width', d => Math.min(d.sbTotal, 3)).attr('opacity',.6);
+
+  // bubbles
+  const tooltip = document.getElementById('tooltip');
+  const circles = g.selectAll('circle.cls').data(data, d => d.className)
+    .join('circle').attr('class','cls')
+    .attr('cx', d => xScale(xVal(d))).attr('cy', d => yScale(yVal(d)))
+    .attr('r', d => sizeScale(d.pmdTotal + d.csTotal + d.sbTotal))
+    .attr('fill', d => riskColor(d.riskScore, riskMax))
+    .attr('fill-opacity',.82)
+    .attr('stroke','none').attr('cursor','pointer')
+    .on('mousemove', function(event, d) {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (event.clientX + 14) + 'px';
+      tooltip.style.top  = (event.clientY - 10) + 'px';
+      tooltip.innerHTML = `<div class="tt-name">${d.simpleName}</div>
+        <div style="color:#64748b;font-size:.68rem;margin-bottom:.3rem">${d.packageName}</div>
+        Line cov: <b>${d.linePct}%</b> &nbsp; Complexity: <b>${d.jacocoComplexity||d.maxCyclomatic||'—'}</b><br>
+        PMD: <b>${d.pmdTotal}</b> &nbsp; CS: <b>${d.csTotal}</b> &nbsp; SpotBugs: <b>${d.sbTotal}</b><br>
+        Risk: <b style="color:${riskColor(d.riskScore,riskMax)}">${d.riskScore}</b>`;
+      renderDetail(d);
+    })
+    .on('mouseleave', () => tooltip.style.display = 'none')
+    .on('click', (_, d) => selectClass(d));
+
+  highlightSelected();
+}
+
+// ── table ────────────────────────────────────────────────────────────────────
+function covBarHTML(pct) {
+  const p = (pct||0).toFixed(0);
+  return `<div class="tbl-cov"><div class="tbl-bar"><div class="tbl-fill" style="width:${p}%;background:${covColor(pct)}"></div></div><span>${p}%</span></div>`;
+}
+
+function renderTable() {
+  const data = activeData();
+  document.getElementById('tbl-count').textContent = `(${data.length})`;
+  const tbody = document.getElementById('tbl-body');
+  tbody.innerHTML = '';
+  data.forEach(d => {
+    const tr = document.createElement('tr');
+    tr.dataset.cls = d.className;
+    if (selectedClass === d.className) tr.classList.add('selected');
+    const rm = riskMax || 1;
+    const sbHtml = d.sbTotal > 0
+      ? `<span class="sb-dot" style="background:${d.sbByPriority?.['1']>0?'#ef4444':'#fb923c'}"></span>${d.sbTotal}`
+      : '0';
+    tr.innerHTML = `
+      <td><span class="risk-num" style="color:${riskColor(d.riskScore,rm)}">${d.riskScore}</span></td>
+      <td><span class="cls-name" title="${d.className}">${d.simpleName}</span></td>
+      <td><span class="pkg-name" title="${d.packageName}">${d.packageName.replace('org.apache.commons.lang3','o.a.c.l3')}</span></td>
+      <td>${covBarHTML(d.linePct)}</td>
+      <td>${covBarHTML(d.branchPct)}</td>
+      <td>${d.jacocoComplexity || d.maxCyclomatic || '—'}</td>
+      <td>${d.pmdTotal}</td>
+      <td>${d.csTotal}</td>
+      <td>${sbHtml}</td>`;
+    tr.addEventListener('click', () => selectClass(d));
+    tbody.appendChild(tr);
+  });
+}
+
+// ── detail panel ─────────────────────────────────────────────────────────────
+function metricRowHTML(label, pct, detail) {
+  const bar = `<div class="cov-wrap"><div class="cov-bar"><div class="cov-fill" style="width:${pct||0}%;background:${covColor(pct)}"></div></div><span class="mval ${covClass(pct)}">${(pct||0).toFixed(1)}%</span><span style="color:#475569;margin-left:.3rem">${detail}</span></div>`;
+  return `<div class="mrow"><span>${label}</span>${bar}</div>`;
+}
+
+function renderDetail(d) {
+  document.getElementById('detail-placeholder').style.display = 'none';
+  const content = document.getElementById('detail-content');
+  content.style.display = 'block';
+  const rm = riskMax || 1;
+
+  const pmdCats = Object.entries(d.pmdByCategory||{}).sort((a,b)=>b[1]-a[1]);
+  const sbCats  = Object.entries(d.sbByCategory||{}).sort((a,b)=>b[1]-a[1]);
+
+  content.innerHTML = `
+    <div class="d-title">${d.simpleName}</div>
+    <div class="d-pkg">${d.packageName}</div>
+    <span class="risk-badge" style="background:${riskColor(d.riskScore,rm)}">Risk ${d.riskScore}</span>
+
+    <div class="d-sec"><h4>Coverage</h4>
+      ${metricRowHTML('Lines',   d.linePct,   `${d.linesCovered}/${d.linesCovered+d.linesMissed}`)}
+      ${metricRowHTML('Branches',d.branchPct, `${d.branchesCovered}/${d.branchesCovered+d.branchesMissed}`)}
+      ${metricRowHTML('Methods', d.methodPct, `${d.methodsCovered}/${d.methodsCovered+d.methodsMissed}`)}
+    </div>
+
+    <div class="d-sec"><h4>Complexity</h4>
+      <div class="mrow"><span>Total (JaCoCo McCabe)</span><span class="mval">${d.jacocoComplexity||'—'}</span></div>
+      ${d.maxCyclomatic ? `<div class="mrow"><span>Max method cyclomatic</span><span class="mval">${d.maxCyclomatic}</span></div>` : ''}
+      ${d.maxCognitive  ? `<div class="mrow"><span>Max method cognitive</span><span class="mval">${d.maxCognitive}</span></div>` : ''}
+    </div>
+
+    <div class="d-sec"><h4>PMD <span style="color:#3b82f6">${d.pmdTotal}</span></h4>
+      ${pmdCats.length ? pmdCats.map(([k,v]) =>
+        `<div class="mini-bar-row"><span>${k}</span><div class="mini-bar"><div style="width:${(v/Math.max(1,d.pmdTotal)*100).toFixed(0)}%"></div></div><span>${v}</span></div>`
+      ).join('') : '<div style="color:#475569;font-size:.72rem">—</div>'}
+    </div>
+
+    <div class="d-sec"><h4>Checkstyle <span style="color:#4ade80">${d.csTotal}</span></h4>
+      <div class="mrow"><span>Errors</span><span class="mval red">${d.csErrors||0}</span></div>
+      <div class="mrow"><span>Warnings</span><span class="mval yellow">${d.csWarnings||0}</span></div>
+    </div>
+
+    <div class="d-sec"><h4>SpotBugs ${d.sbTotal > 0 ? `<span class="sb-hi">${d.sbTotal}</span>` : `<span style="color:#22c55e">0</span>`}</h4>
+      ${sbCats.length ? sbCats.map(([k,v]) =>
+        `<div class="mrow"><span>${k}</span><span class="mval">${v}</span></div>`
+      ).join('') : '<div style="color:#22c55e;font-size:.72rem">No issues found</div>'}
+      ${d.sbMinRank < 20 ? `<div class="mrow" style="margin-top:.3rem"><span>Highest severity rank</span><span class="mval red">${d.sbMinRank}</span></div>` : ''}
+    </div>`;
+}
+
+// ── selection ────────────────────────────────────────────────────────────────
+function selectClass(d) {
+  selectedClass = d.className;
+  highlightSelected();
+  renderDetail(d);
+  const row = document.querySelector(`#tbl-body tr[data-cls="${CSS.escape(d.className)}"]`);
+  if (row) { row.classList.add('selected'); row.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+}
+
+function highlightSelected() {
+  d3.selectAll('circle.cls')
+    .attr('stroke', d => d.className === selectedClass ? '#fff' : 'none')
+    .attr('stroke-width', d => d.className === selectedClass ? 2 : 0);
+  document.querySelectorAll('#tbl-body tr').forEach(tr => {
+    tr.classList.toggle('selected', tr.dataset.cls === selectedClass);
+  });
+}
+
+// ── table sort ───────────────────────────────────────────────────────────────
+document.querySelectorAll('thead th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortAsc = !sortAsc; else { sortCol = col; sortAsc = false; }
+    document.querySelectorAll('thead th').forEach(t => t.classList.remove('sorted'));
+    th.classList.add('sorted');
+    th.textContent = th.textContent.replace(/[▲▼]/,'') + (sortAsc ? ' ▲' : ' ▼');
+    renderTable();
+  });
+});
+
+// ── filter events ─────────────────────────────────────────────────────────────
+['pkg-filter','search','hide-inner','hide-nocov'].forEach(id => {
+  document.getElementById(id).addEventListener('change', refresh);
+  if (id === 'search') document.getElementById(id).addEventListener('input', refresh);
+});
+
+function refresh() { setupScatter(); renderTable(); }
+
+// ── initial render ───────────────────────────────────────────────────────────
+setupScatter();
+renderTable();
+window.addEventListener('resize', () => setupScatter());
+</script>
+</body>
+</html>

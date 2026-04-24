@@ -158,6 +158,14 @@
     }
     .link-btn-tests:hover { background: rgba(3,105,161,.35); }
 
+    .badge-landscape { background: #1a2e3a; }
+    .link-btn-landscape {
+      color: #f59e0b;
+      border-color: #92400e;
+      background: rgba(146,64,14,.15);
+    }
+    .link-btn-landscape:hover { background: rgba(146,64,14,.35); }
+
     footer {
       max-width: 960px;
       margin: 3rem auto 0;
@@ -256,6 +264,21 @@
     </p>
     <div class="card-links">
       <a class="link-btn link-btn-tests" href="tests/index.html">Test report</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="badge badge-landscape">🗺</div>
+      <span class="card-title">Quality Landscape</span>
+    </div>
+    <p class="card-desc">
+      Experimental per-class rollup of all four tools. Interactive scatter plot
+      (complexity × coverage, sized by violations, colored by risk score) plus
+      a sortable table and per-class detail panel.
+    </p>
+    <div class="card-links">
+      <a class="link-btn link-btn-landscape" href="landscape/index.html">Open landscape</a>
     </div>
   </div>
 

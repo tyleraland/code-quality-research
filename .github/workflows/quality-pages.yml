@@ -39,16 +39,16 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: gradle-
 
-      - name: Run all quality tools
+      - name: Run all quality tools + landscape rollup
         # ignoreFailures=true on all tools and tests, so this always succeeds
-        run: ./gradlew qualityReport
+        run: ./gradlew qualityLandscape
 
       - name: Assemble site
         run: |
           BUILD_DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
           SHA_SHORT=${GITHUB_SHA::7}
 
-          mkdir -p site/checkstyle site/pmd site/spotbugs site/jacoco site/tests
+          mkdir -p site/checkstyle site/pmd site/spotbugs site/jacoco site/tests site/landscape
 
           # ── per-tool HTML reports ──────────────────────────────────────────
           cp build/reports/checkstyle/main.html  site/checkstyle/main.html
@@ -63,6 +63,9 @@ jobs:
 
           # ── JUnit test results ────────────────────────────────────────────
           cp -r build/reports/tests/test/.        site/tests/
+
+          # ── Per-class landscape (self-contained HTML) ─────────────────────
+          cp build/reports/quality-landscape/index.html site/landscape/index.html
 
           # ── Dashboard index ───────────────────────────────────────────────
           sed \
