@@ -74,8 +74,17 @@ tbody td{padding:.35rem .6rem;vertical-align:middle}
 .cb-leg-p{background:rgba(234,179,8,.15);color:#eab308}
 #cb-close{background:none;border:1px solid #2d3448;color:#94a3b8;border-radius:4px;padding:.15rem .55rem;cursor:pointer;font-size:.78rem;flex-shrink:0}
 #cb-close:hover{background:#1e2330;color:#f1f5f9}
-#cb-body{overflow:auto;max-height:520px}
+#cb-nav{display:none;align-items:center;gap:.6rem;padding:.4rem 1rem;background:#0f1117;border-bottom:1px solid #1e2330;flex-wrap:wrap}
+.cb-nav-btn{background:#1e2330;border:1px solid #2d3448;color:#94a3b8;border-radius:4px;padding:.18rem .7rem;cursor:pointer;font-size:1rem;line-height:1;flex-shrink:0}
+.cb-nav-btn:hover:not(:disabled){background:#2d3448;color:#f1f5f9}
+.cb-nav-btn:disabled{opacity:.3;cursor:default}
+#cb-nav-info{flex:1;display:flex;align-items:center;gap:.5rem;min-width:0;overflow:hidden}
+#cb-nav-counter{font-size:.7rem;color:#64748b;flex-shrink:0;white-space:nowrap}
+#cb-nav-msg{font-size:.72rem;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#cb-body{overflow:auto;max-height:480px}
 #cb-loading{color:#64748b;padding:2rem;text-align:center;font-size:.8rem}
+tr.cb-active td{background:rgba(251,191,36,.1) !important}
+tr.cb-active .cb-ln{border-right-color:#fbbf24 !important;color:#fbbf24;font-weight:700}
 #cb-table{width:100%;border-collapse:collapse;font-family:'Fira Code','Cascadia Code',ui-monospace,monospace;font-size:12px;line-height:1.7}
 #cb-table td{padding:0;vertical-align:top}
 .cb-ln{width:52px;min-width:52px;text-align:right;padding:0 .5rem;color:#334155;user-select:none;border-right:3px solid transparent;font-size:11px;white-space:nowrap}
@@ -130,6 +139,15 @@ tr.cov-P .cb-ann{background:rgba(234,179,8,.04)}
     <span class="cb-leg cb-leg-p">■ Partial</span>
     <span class="cb-leg cb-leg-m">■ Missed</span>
     <button id="cb-close" title="Close code browser">✕ close</button>
+  </div>
+  <div id="cb-nav">
+    <button class="cb-nav-btn" id="cb-prev" title="Previous violation">&#8592;</button>
+    <div id="cb-nav-info">
+      <span id="cb-nav-counter"></span>
+      <span id="cb-nav-badge" class="ann-badge"></span>
+      <span id="cb-nav-msg"></span>
+    </div>
+    <button class="cb-nav-btn" id="cb-next" title="Next violation">&#8594;</button>
   </div>
   <div id="cb-body">
     <div id="cb-loading" style="display:none">Loading source…</div>
@@ -455,6 +473,46 @@ function annLabel(a) {
 }
 
 let cbCurrentOuter = null;
+let cbViolations   = [];
+let cbViolIdx      = 0;
+
+// ── violation severity (higher = worse = shown first) ─────────────────────────
+function annSeverity(a) {
+  if (a.t === 'sb')  return 10000 - (a.rank ?? 20) * 100 - (a.p ?? 3) * 10;
+  if (a.t === 'pmd') return  4000 - (a.s  ?? 5)   * 200;
+  if (a.t === 'cs')  return a.s === 'error' ? 1000 : 400;
+  return 0;
+}
+
+function buildViolations(data) {
+  const v = [];
+  Object.entries(data.ann).forEach(([lineStr, anns]) => {
+    const line = parseInt(lineStr, 10);
+    anns.forEach(a => v.push({ line, ann: a, score: annSeverity(a) }));
+  });
+  v.sort((a, b) => b.score - a.score);
+  return v;
+}
+
+function goToViolation(idx) {
+  if (!cbViolations.length) return;
+  cbViolIdx = Math.max(0, Math.min(idx, cbViolations.length - 1));
+  const v = cbViolations[cbViolIdx];
+
+  document.getElementById('cb-nav-counter').textContent = `${cbViolIdx + 1} / ${cbViolations.length}`;
+  const badge = document.getElementById('cb-nav-badge');
+  badge.textContent  = annLabel(v.ann);
+  badge.className    = `ann-badge ${annCssClass(v.ann.t)}`;
+  document.getElementById('cb-nav-msg').textContent = (v.ann.m || '').slice(0, 100);
+
+  document.getElementById('cb-prev').disabled = cbViolIdx === 0;
+  document.getElementById('cb-next').disabled = cbViolIdx === cbViolations.length - 1;
+
+  // highlight the active row
+  document.querySelectorAll('#cb-table tr.cb-active').forEach(r => r.classList.remove('cb-active'));
+  const row = document.querySelector(`#cb-table tr[data-line="${v.line}"]`);
+  if (row) { row.classList.add('cb-active'); row.scrollIntoView({block: 'center', behavior: 'smooth'}); }
+}
 
 function openCodeBrowser(d) {
   const cb    = document.getElementById('code-browser');
@@ -463,10 +521,13 @@ function openCodeBrowser(d) {
 
   if (outer === cbCurrentOuter) {
     cb.style.display = 'block';
+    cb.scrollIntoView({behavior: 'smooth', block: 'start'});
     return;
   }
   cbCurrentOuter = outer;
+  cbViolations   = [];
 
+  document.getElementById('cb-nav').style.display = 'none';
   const loading = document.getElementById('cb-loading');
   const table   = document.getElementById('cb-table');
   table.innerHTML = '';
@@ -480,9 +541,11 @@ function openCodeBrowser(d) {
     .then(data => {
       loading.style.display = 'none';
       renderCodeTable(data, table);
-      // scroll the first annotated line into view within the code body
-      const firstAnn = document.querySelector('#cb-table tr td.cb-ann:not(:empty)');
-      if (firstAnn) firstAnn.closest('tr').scrollIntoView({block: 'center'});
+      cbViolations = buildViolations(data);
+      if (cbViolations.length) {
+        document.getElementById('cb-nav').style.display = 'flex';
+        goToViolation(0);
+      }
     })
     .catch(err => {
       loading.textContent = `Source not available (${err.message})`;
@@ -499,19 +562,17 @@ function renderCodeTable(data, table) {
     const anns = data.ann[String(nr)] || [];
 
     const tr = document.createElement('tr');
+    tr.dataset.line = nr;
     if (cov) tr.className = `cov-${cov}`;
 
-    // line number
     const tdLn = document.createElement('td');
     tdLn.className = 'cb-ln';
     tdLn.textContent = nr;
 
-    // source text
     const tdSrc = document.createElement('td');
     tdSrc.className = 'cb-src';
     tdSrc.textContent = line;
 
-    // annotation badges
     const tdAnn = document.createElement('td');
     tdAnn.className = 'cb-ann';
     anns.forEach(a => {
@@ -529,6 +590,11 @@ function renderCodeTable(data, table) {
         annTip.style.top  = (ev.clientY - 10) + 'px';
       });
       b.addEventListener('mouseleave', () => { annTip.style.display = 'none'; });
+      // clicking a badge jumps to that violation in the nav
+      b.addEventListener('click', () => {
+        const vi = cbViolations.findIndex(v => v.line === nr && v.ann === a);
+        if (vi >= 0) goToViolation(vi);
+      });
       tdAnn.appendChild(b);
     });
 
@@ -541,6 +607,8 @@ function renderCodeTable(data, table) {
   table.appendChild(frag);
 }
 
+document.getElementById('cb-prev').addEventListener('click', () => goToViolation(cbViolIdx - 1));
+document.getElementById('cb-next').addEventListener('click', () => goToViolation(cbViolIdx + 1));
 document.getElementById('cb-close').addEventListener('click', () => {
   document.getElementById('code-browser').style.display = 'none';
 });
